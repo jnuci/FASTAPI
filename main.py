@@ -23,6 +23,10 @@ def find_post(id):
     for p in my_posts:
         if p["id"] == int(id):
             return p
+def post_index(id):
+    for i, p in enumerate(my_posts):
+        if p['id'] == id:
+            return i
 
 @app.get("/")
 def root():
@@ -59,3 +63,30 @@ Update: Put/Patch, put submits all the info again.
         Patch will change only what you submit
 Delete: Delete
 '''
+
+@app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(id: int):
+    # deleting post
+    # find the index in array
+    # my_posts.pop(id)
+    # don't send data back with a 204
+    index = post_index(id)
+
+    if index == None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exist.")
+
+    my_posts.pop(index)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@app.put("/posts/{id}")
+def update_post(id: int, post: Post):
+    index = post_index(id)
+    
+    if index == None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exisst.")
+
+    post_dict = post.dict()
+    post_dict['id'] = id
+    my_posts[index] = post_dict
+
+    return {"data": post_dict}
