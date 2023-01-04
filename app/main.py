@@ -1,13 +1,27 @@
-from fastapi import FastAPI, Body, Response, status, HTTPException
+from fastapi import FastAPI, Body, Response, status, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 from random import randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
+from sqlalchemy.orm import Session
+from . import models
+from .database import engine, SessionLocal
+
+
 # uvicorn main:app --reload
 
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # using the Post class with BaseModel allows us to check
 # for each entry we want or give default values
@@ -17,6 +31,7 @@ class Post(BaseModel):
     content: str
     published: bool = True
     rating: Optional[int] = None
+
 while True:
     try:
         conn = psycopg2.connect(host='localhost',
@@ -31,24 +46,13 @@ while True:
         print(f"Error was {error}")
         time.sleep(2) 
 
-
-
-# each post represented as dictionary nested in list
-my_posts = [{"title": "title of post1", "content": "content of post1", "id": 1},
-            {"title": "favorite foods", "content": "I like pizza", "id": 2}]
-
-def find_post(id):
-    for p in my_posts:
-        if p["id"] == int(id):
-            return p
-def post_index(id):
-    for i, p in enumerate(my_posts):
-        if p['id'] == id:
-            return i
-
 @app.get("/")
 def root():
     return {"message": "Hello World"}
+
+@app.get("/sqlalchemy")
+def test_posts(df: Session = Depends(get_db)):
+    return {"status": "successs"}
 
 @app.get("/posts")
 def get_posts():
